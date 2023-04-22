@@ -1,0 +1,31 @@
+load('F:\MS\matlab_code\WORK\SPIE_2017\Classification\libsvm-3.20\matlab\MR8Results\GTROI\newcomputed\v1\Final\Full_MR8_PN_Frontal\PN_Parameters_Frontal.mat')
+Yhat_mr8= cell2mat(save_Predict_label_test);
+Yhat_mr8_prob=cell2mat(save_prob_estimates);
+ Y= cell2mat(save_True_Label_test);
+ indices_mr8 =indices; 
+ save_idx_mr8=cell(5,1);
+for i= 1:5
+ 
+  idx=find(indices_mr8 ==i);
+  save_idx_mr8{i,1}=idx;
+end
+
+idx_mr8=cell2mat( save_idx_mr8);
+load('F:\MS\matlab_code\WORK\SPIE_2017\Classification\libsvm-3.20\matlab\GaborResults\GTROI\newcompute\v1\Final\Full_Gabor_PN_Frontal\PN_Full_Parameters_Frontal.mat')
+Yhat_gabor= cell2mat(save_Predict_label_test);
+Yhat_gabor_prob=cell2mat(save_prob_estimates);
+Yhat_reorganiseprob_gabor=zeros(numel(idx_mr8),2);
+Yhat_reorganise_gabor=zeros(numel(idx_mr8),1);
+for j=1:numel(idx_mr8)
+    
+    Yhat_reorganise_gabor(j)=Yhat_gabor(idx_mr8(j));
+    Yhat_reorganiseprob_gabor(j,:)=Yhat_gabor_prob(idx_mr8(j),:);
+
+end
+
+
+[h,p,e1,e2] = testcholdout(Yhat_mr8,Yhat_reorganise_gabor(:,1),Y,'Alternative','greater')
+
+% [h,p] = ttest2(Yhat_mr8_prob,Yhat_reorganiseprob_gabor)
+% 
+% [h,p] = ttest2(Yhat_mr8,Yhat_reorganise_gabor)

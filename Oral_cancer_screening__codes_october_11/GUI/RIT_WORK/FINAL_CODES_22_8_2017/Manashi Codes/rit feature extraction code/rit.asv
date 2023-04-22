@@ -1,0 +1,53 @@
+
+function feature_extraction(I1,mask_F_normal_lt,mask_F_normal_rt )
+%%%input to the function
+I1= imread('P002.jpg');
+load('Face_Mask.mat');
+mask_F_normal_lt=img_face_lt;
+mask_F_normal_rt=img_face_rt;
+%
+
+%%% I1 is  the input image
+%%% Masks consist of left and right half of mask
+
+%%% feature extraction and classification
+
+%%feature extraction
+            %%%%%%%bringing the image to a scale of floating point 0.0-1.0
+            for sacle_idx=2:6
+            
+            maxval=max(max(I1));
+            minval=min(min(I1));
+            range=1/(maxval-minval);
+            I1=range.*(I1-minval); 
+             
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+           % [row,col]=size(I1); %%%% Get rows and cols value
+           
+            %%%%%%%%%%%% histogram equalization 
+            % I1 = adapthisteq(uint8(I1));
+            I1 = adapthisteq((I1));
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            GT_gabor_F_normal_lt = TexturalFeatureExtraction_RIGabor_HanAndMa(I1,logical(mask_F_normal_lt),sacle_idx); %%%%%% Input : Image , Mask , Scale Idx
+            GT_gabor_F_normal_rt = TexturalFeatureExtraction_RIGabor_HanAndMa(I1,logical(mask_F_normal_rt),sacle_idx); %%%%%% Input : Image , Mask , Scale Idx
+            
+            GT_Normal_Gabor_HM_append_LT_RT_Frontface = [GT_gabor_F_normal_lt GT_gabor_F_normal_rt];
+            GT_Normal_Gabor_HM_difference_LT_RT_Frontface = GT_gabor_F_normal_lt - GT_gabor_F_normal_rt;
+            GT_Normal_Gabor_HM_mean_LT_RT_Frontface = (GT_gabor_F_normal_lt + GT_gabor_F_normal_rt)/2;
+             
+            
+            
+            save(['GT_Normal_Gabor_HM_append_LT_RT_Frontface_scale',num2str(sacle_idx),'.mat'],'GT_Normal_Gabor_HM_append_LT_RT_Frontface');
+            save(['GT_Normal_Gabor_HM_difference_LT_RT_Frontface_scale',num2str(sacle_idx),'.mat'],'GT_Normal_Gabor_HM_difference_LT_RT_Frontface');
+            save(['GT_Normal_Gabor_HM_mean_LT_RT_Frontface_scale',num2str(sacle_idx),'.mat'],'GT_Normal_Gabor_HM_mean_LT_RT_Frontface');
+            save(['GT_gabor_F_normal_lt_scale',num2str(sacle_idx),'.mat'],'GT_gabor_F_normal_lt');
+            save(['GT_gabor_F_normal_rt_scale',num2str(sacle_idx),'.mat'],'GT_gabor_F_normal_rt');
+            
+            
+            
+            end
+end
+    

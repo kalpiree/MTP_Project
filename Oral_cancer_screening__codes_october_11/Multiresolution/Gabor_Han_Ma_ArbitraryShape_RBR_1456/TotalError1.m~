@@ -1,0 +1,26 @@
+% ============================ TotalError.m file ============================= %
+%
+% Description : To calculate Percentage Error and Accuracy   
+% Input parameter :  nothing (using Dist_Matrix)
+% Output parameter : nothing
+% Subroutine  called : FindError.m   
+% Called by :    
+% Reference :    
+% Author of the code : Rahul Das Gupta   
+% Date of creation :    11-04-2011
+% ------------------------------------------------------------------------------------------------------- %
+% Modified on :    
+% Modification details :    
+% Modified By :    
+% ===================================================================== %
+%   Copy righted by E&ECE Department, IIT Kharagpur, India.
+% ===================================================================== % 
+
+
+
+
+ [R,P,CR,CP,VR1,VP1,AR,AP]=Recall1(Dist_Matrix_IGD,Dist_Matrix_IGM);
+ 
+%  CM=ConfusionMatrix(Dist_Matrix_IGMGD);          
+AR
+AP

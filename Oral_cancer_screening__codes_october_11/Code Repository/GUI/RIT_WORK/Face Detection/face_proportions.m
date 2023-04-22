@@ -1,0 +1,400 @@
+%% Main Code for Face Detection
+close all
+clear all
+clc
+%% Fetch the Index Numbers of the Malignant Patients
+d = dir('E:\Suraj Kiran\Suraj_Intern\Edited\Normal'); % Reading Dir of the Specified Folder
+%d = dir('E:\Suraj Kiran\Suraj_Intern\Edited\Malignant'); % Reading Dir of the Specified Folder
+%d = dir('F:\MS\matlab_code\WORK\ThermalDatabase_OOC\NonMalignant'); % Reading Dir of the Specified Folder
+isub = [d(:).isdir]; %# returns logical vector
+nameFolds = {d(isub).name}';
+nameFolds=nameFolds(3:end);
+no_dir=numel(nameFolds);
+%%
+for folder_idx=1:no_dir
+     close all;
+    I_F=xlsread(['E:\Suraj Kiran\Suraj_Intern\Edited\Normal\',nameFolds{folder_idx},'\','Jpeg','\',nameFolds{folder_idx},'.csv']);
+%     I_F=xlsread(['E:\Suraj Kiran\Suraj_Intern\Edited\Malignant\',nameFolds{folder_idx},'\',nameFolds{folder_idx},'.csv']);
+%    I_F=xlsread(['F:\MS\matlab_code\WORK\ThermalDatabase_OOC\NonMalignant\',nameFolds{folder_idx},'\',nameFolds{folder_idx},'.csv']);
+     [BW_mask_F,mask_F]=(face_detect( I_F ));
+     I_F=mat2gray(I_F);
+     face_img=(I_F).*double(BW_mask_F);
+
+%% Eye Detection
+      [ modified_r_min,eye_brow_row,row_rt_eye,row_lt_eye,col_rt_eye,col_lt_eye ] = eye_detection_thermal( face_img );
+      figure();
+      imshow(face_img);
+      hold on;
+      plot(col_rt_eye,row_rt_eye,'c*');
+      plot(col_lt_eye,row_lt_eye,'c*');
+      % Plotting the bounding box around the eye
+      rectangle('Position', [ col_rt_eye-70,row_rt_eye-20, 70, 40],...
+        'EdgeColor','r', 'LineWidth', 3)
+      rectangle('Position', [ col_lt_eye,row_lt_eye-20, 70, 40],...
+        'EdgeColor','r', 'LineWidth', 3)
+      row_mean_eye=row_lt_eye;
+ 
+      %% Facial proportions 
+      
+      modified_face_img=face_img(modified_r_min:eye_brow_row,:);
+      [r,c]=find(modified_face_img>0);
+      cmin=min(c);
+      cmax=max(c);
+      
+      hair_eye_distance=abs(modified_r_min-eye_brow_row);
+      eye_nose_distance=hair_eye_distance;
+      nose_chin_distance=hair_eye_distance;
+      
+      nose_row=eye_brow_row+eye_nose_distance;
+      chin_row=nose_row+eye_nose_distance;
+      
+     
+      column_offset=min(c);
+      
+      inter_distance=(max(c)-min(c));
+      inter_distance=inter_distance/5;
+      
+      eye_corner_rr=inter_distance+column_offset;
+      eye_corner_rl=col_rt_eye;
+      eye_corner_lr=col_lt_eye;
+      eye_corner_ll=inter_distance+eye_corner_lr;
+      max_face=inter_distance+eye_corner_ll;
+      
+      %%Plots
+      figure();
+      imshow(face_img);
+      hold on;
+      Length_row_plot=[cmin:cmax];
+      plot(Length_row_plot,modified_r_min,'c*');
+      plot(Length_row_plot,eye_brow_row,'c*');
+      plot(Length_row_plot,nose_row,'c*');
+      plot(Length_row_plot,chin_row,'c*');
+            
+      Length_column_plot=[modified_r_min:chin_row];
+     % plot(column_offset,Length_column_plot,'c*');
+     % plot(eye_corner_rr,Length_column_plot,'c*');
+      plot(eye_corner_rl,Length_column_plot,'c*');
+      plot(eye_corner_lr,Length_column_plot,'c*');
+     % plot(eye_corner_ll,Length_column_plot,'c*');
+     % plot(max_face,Length_column_plot,'c*');
+      hold off;
+       [r,c]=find(face_img>0);
+        if(chin_row>max(r))
+          chin_row=max(r);
+      end
+      %% Mouth Keypoints
+      eye_mid_left=ceil((eye_corner_ll+eye_corner_lr)/2);
+      eye_mid_right=ceil((eye_corner_rl+eye_corner_rr)/2);
+      mouth_img=[];
+      for i=nose_row+1:chin_row
+         for j=eye_mid_right+1:eye_mid_left
+            mouth_img(i-nose_row,j-eye_mid_right)=face_img(i,j);
+         end
+      end
+      
+      cmid=ceil((eye_mid_right+eye_mid_left)/2)-eye_mid_right;
+      max_right=max(max(mouth_img(:,1:cmid)));
+      max_left=max(max(mouth_img(:,((cmid+1):(eye_mid_left-eye_mid_right)))));
+      [r1,c1]=find(max_right==mouth_img(:,1:cmid),1);
+      [r2,c2]=find(max_left==mouth_img(:,((cmid+1):(eye_mid_left-eye_mid_right))));
+      r2=r2+nose_row;
+      r1=r1+nose_row;
+      c1=c1+eye_mid_right;
+      c2=c2+cmid+eye_mid_right;
+      figure();
+      imshow(face_img);title('MOUTH');
+      hold on;
+      plot(c1,r1,'c*');
+      plot(c2,r2,'c*');
+      
+            %%  Geometry
+%      
+%       
+%   
+%       euclideanDistance = abs(col_rt_eye-col_lt_eye);
+%       col_lip=[cmin:cmax];
+%       row_lip=(1.5*euclideanDistance)+row_mean_eye;
+%      
+%       per_bisec=ceil((col_rt_eye+col_lt_eye)/2);
+%       min_ear_row=row_lip;
+%       min_ear_col=col_lip(1);
+%       max_ear_row=row_lip;
+%       max_ear_col=cmax;
+%       
+%       figure();
+%       imshow(face_img);
+%       hold on;
+%       y=[];
+%       for x=min_ear_col:max_ear_col
+%       y=[y ceil(min_ear_row+(((x-min_ear_col)*(min_ear_row-max_ear_row))/(min_ear_col-max_ear_col)))];
+%       end
+%       x=[min_ear_col:max_ear_col];
+%       plot(x,y,'c*');
+%       per_bisec_col_plot=[col_rt_eye:col_lt_eye];
+%      
+%       plot(per_bisec_col_plot,row_lt_eye,'c*');
+%       req_loc_in_ear_row=find(per_bisec==x);
+%       req_loc_in_ear_row=ceil(y(req_loc_in_ear_row));
+%       
+%       min_per_bisec_row=row_lt_eye;
+%       min_per_bisec_col=per_bisec;
+%       max_per_bisec_row=req_loc_in_ear_row;
+%       max_per_bisec_col=per_bisec;
+%       
+%       req_per_rows=[min_per_bisec_row:max_per_bisec_row];
+%       plot(per_bisec,req_per_rows,'c*');
+%      
+%       max_per_bisec_row=nose_row;
+% 
+%      
+%        
+% %% Gradient Method  
+%     nose_img_lt=[];
+%     nose_img_rt=[];
+%     left_shift=10;
+%     right_shift=10;
+%     modified_min_row_nose=ceil((1/2)*(max_per_bisec_row-min_per_bisec_row)+min_per_bisec_row); 
+%      for i=(modified_min_row_nose+1):max_per_bisec_row
+%          for j=col_rt_eye-right_shift+1:col_rt_eye
+%              nose_img_rt(i-modified_min_row_nose,j-col_rt_eye+right_shift)=face_img(i,j);
+%          end
+%      end
+%      
+%      for i=(modified_min_row_nose+1):max_per_bisec_row
+%          for j=col_lt_eye+1:col_lt_eye+left_shift
+%          nose_img_lt(i-modified_min_row_nose,j-col_lt_eye)=face_img(i,j);
+%          end
+%      end
+%      figure();
+%      imshow(face_img);hold on;
+%      Fx_rt=[];
+%      for i=1:size(nose_img_rt,1)
+%          Fx_rt_temp=(gradient(nose_img_rt(i,:)));
+% %          Fx_rt(i)=max(Fx_rt_temp);
+% %          c=find(Fx_rt(i)==Fx_rt_temp);
+%          [pks_rt,locs_rt,w_rt,p_rt] = findpeaks(Fx_rt_temp);
+%          if(isempty(p_rt)==isempty([]))
+%              if i>1
+%                  Fx_rt(i)=Fx_rt(i-1);
+%              else
+%                  Fx_rt(i)=0;
+%              end
+%          else 
+%              p_rt_max=max(p_rt);
+%              index_loc=find((p_rt_max==p_rt),1);
+%              Fx_rt(i)=Fx_rt_temp(locs_rt(index_loc));
+%          end
+%              % plot(c+col_rt_eye-right_shift,i+modified_min_row_nose,'c*');
+%      end
+%      Fx_lt=[];
+%      for i=1:size(nose_img_lt,1)
+%          Fx_lt_temp=(gradient(nose_img_lt(i,:)));
+% %          Fx_lt(i)=max(Fx_lt_temp);
+% %          c=find(Fx_lt(i)==Fx_lt_temp);
+%          [pks_lt,locs_lt,w_lt,p_lt] = findpeaks(Fx_lt_temp);
+%          if(isempty(p_lt)==isempty([]))
+%              if i>1
+%                  Fx_lt(i)=Fx_lt(i-1);
+%              else
+%                  Fx_lt(i)=0;
+%              end
+%          else
+%              p_lt_max=max(p_lt);
+%              index_loc=find((p_lt_max==p_lt),1);
+%              Fx_lt(i)=Fx_lt_temp(locs_lt(index_loc));
+%          end
+%         % plot(c+col_lt_eye,i+modified_min_row_nose,'c*');
+%      end
+%      figure();
+%      plot(Fx_rt);title('RIGHT');
+%      figure();
+%      plot(Fx_lt);title('LEFT');
+%      Fx_req_rt=min(Fx_rt);
+%      pks_rt=[];
+%      locs_rt=[];
+%      w_rt=[];
+%      p_rt=[];
+%      pks_lt=[];
+%      locs_lt=[];
+%      w_lt=[];
+%      p_lt=[];
+%      
+%          [pks_rt,locs_rt,w_rt,p_rt] = findpeaks(Fx_rt);
+%          p_rt_max=max(p_rt);
+%          index_loc=find(p_rt_max==p_rt);
+%          r_rt=locs_rt(index_loc);
+%          c_rt=min(find(Fx_rt(r_rt)==gradient(nose_img_rt(r_rt,:))));
+%          
+%          [pks_lt,locs_lt,w_lt,p_lt] = findpeaks(Fx_lt);
+%          p_lt_max=max(p_lt);
+%          index_loc=find(p_lt_max==p_lt);
+%          r_lt=locs_lt(index_loc);
+%          c_lt=min(find(Fx_lt(r_lt)==gradient(nose_img_lt(r_lt,:))));
+% %     r_rt=min(find(Fx_req_rt==Fx_rt));
+% %     c_rt=min(find(min(gradient(nose_img_rt(r_rt,:)))==gradient(nose_img_rt(r_rt,:))));
+%     figure();
+%     imshow(face_img);title(nameFolds{folder_idx});
+%     hold on;
+%     plot(c_rt+col_rt_eye-right_shift,r_rt+modified_min_row_nose,'c*');
+%     
+%      
+%     Fx_req_lt=max(Fx_lt);
+%      
+% %     r_lt=min(find(Fx_req_lt==Fx_lt));
+% %     c_lt=min(find(max(gradient(nose_img_lt(r_lt,:)))==gradient(nose_img_lt(r_lt,:))));
+%     hold on;
+%     plot(c_lt+col_lt_eye,r_lt+modified_min_row_nose,'c*');
+%    
+% % %% Perpendiculars method- Corner
+% % %     nose_img_lt=[];
+% % %     nose_img_rt=[];
+% % %     modified_min_row_nose=ceil((1/3)*(max_per_bisec_row-min_per_bisec_row)+min_per_bisec_row); 
+% % %     for i=(modified_min_row_nose+1):max_per_bisec_row
+% % %          for j=col_rt_eye-10+1:col_rt_eye+10
+% % %              nose_img_rt(i-modified_min_row_nose,j-col_rt_eye+10)=face_img(i,j);
+% % %          end
+% % %     end
+% % %      
+% % %      for i=(modified_min_row_nose+1):max_per_bisec_row
+% % %          for j=col_lt_eye-10:col_lt_eye+10
+% % %          nose_img_lt(i-modified_min_row_nose,j-col_lt_eye+11)=face_img(i,j);
+% % %          end
+% % %      end
+% % %      
+% % %      
+% % % %     figure();
+% % % %     subplot(1,2,2);imshow(nose_img_lt);
+% % % %     subplot(1,2,1);imshow(nose_img_rt);
+% % %     C_lt = corner(nose_img_lt,'MinimumEigenvalue');
+% % % %     hold on
+% % % %     plot(C_lt(:,1), C_lt(:,2), 'r*');
+% % % %     hold off;
+% % %     figure();
+% % %     imshow(nose_img_lt);
+% % %     hold on
+% % %     Corner_pts_lt=[];
+% % %     for index_corner_lt=1:size(C_lt,1)
+% % %     Corner_pts_lt(index_corner_lt)=(nose_img_lt(C_lt(index_corner_lt,2),C_lt(index_corner_lt,1)));
+% % %     end
+% % %     max_nose_intensity_lt=max(Corner_pts_lt);
+% % %     index_corner_find_lt=find(Corner_pts_lt==max_nose_intensity_lt);
+% % %     plot(C_lt(index_corner_find_lt,1),C_lt(index_corner_find_lt,2),'*c');
+% % %     hold off;
+% % %     
+% % %     C_rt = corner(nose_img_rt,'MinimumEigenvalue');
+% % % %     hold on
+% % % %     plot(C_rt(:,1), C_rt(:,2), 'r*');
+% % % %     hold off;
+% % %     figure();
+% % %     imshow(nose_img_rt);
+% % %     hold on
+% % %     Corner_pts_rt=[];
+% % %     for index_corner_rt=1:size(C_rt,1)
+% % %     Corner_pts_rt(index_corner_rt)=(nose_img_rt(C_rt(index_corner_rt,2),C_rt(index_corner_rt,1)));
+% % %     end
+% % %     max_nose_intensity_rt=max(Corner_pts_rt);
+% % %     index_corner_find_rt=find(Corner_pts_rt==max_nose_intensity_rt);
+% % %     plot(C_rt(index_corner_find_rt,1),C_rt(index_corner_find_rt,2),'*c');
+% % %     hold off;
+% % %     figure();
+% % % imshow(face_img);
+% % % hold on;
+% % % plot(C_rt(index_corner_find_rt,1)+col_rt_eye-10+1,C_rt(index_corner_find_rt,2)+modified_min_row_nose,'*c');
+% % % plot(C_lt(index_corner_find_lt,1)+col_lt_eye-10,C_lt(index_corner_find_lt,2)+modified_min_row_nose,'*c');
+% % % 
+% % % figure();
+% % %     imshow(face_img);
+% % %     hold on;
+% % %     plot(C_rt(:,1)+col_rt_eye-10+1,C_rt(:,2)+modified_min_row_nose,'*c');
+% % %     plot(C_lt(:,1)+col_lt_eye-10,C_lt(:,2)+modified_min_row_nose,'*c');
+% % %      
+% % %% ANGLE METHOD  
+% % %       %Right Image 30 degrees
+% % %       max_angle=35;
+% % %       min_angle=10;
+% % %       for angle=(max_angle):-1:(min_angle)
+% % %           x_right=[];
+% % %           for y_right=row_lt_eye+1:max_per_bisec_row
+% % %           req_right_30_col_length=ceil(abs((y_right-row_lt_eye)*tan((angle*pi)/180)));
+% % %           x_right_temp=per_bisec-req_right_30_col_length;
+% % %           check_loc_x=find(x_right_temp==x);
+% % %           check_loc_y=find(y_right==y);
+% % %           if(check_loc_x==check_loc_y)
+% % %               break;
+% % %           end
+% % %           x_right=[x_right x_right_temp];
+% % %           end   
+% % %           y_right=[row_lt_eye+1:max_per_bisec_row];
+% % % %           plot(x_right,y_right,'c*');
+% % %           Sum=0;
+% % %           for index=row_lt_eye+1:max_per_bisec_row
+% % %               Sum=Sum+face_img(x_right(index-row_lt_eye),y_right(index-row_lt_eye));
+% % %           end
+% % %           Fx(angle)=Sum;
+% % %       end
+% % %       %Fx=gradient(Fx);
+% % % %       figure();
+% % % %       imshow(face_img);
+% % % %       hold on;
+% % %       x_right=[];
+% % %       max_angle=find(Fx==max(Fx));
+% % %       for y_right=row_lt_eye+1:max_per_bisec_row
+% % %           req_right_30_col_length=ceil(abs((y_right-row_lt_eye)*tan((max_angle*pi)/180)));
+% % %           x_right_temp=per_bisec-req_right_30_col_length;
+% % %           check_loc_x=find(x_right_temp==x);
+% % %           check_loc_y=find(y_right==y);
+% % %           if(check_loc_x==check_loc_y)
+% % %               break;
+% % %           end
+% % %           x_right=[x_right x_right_temp];
+% % %       end   
+% % %       y_right=[row_lt_eye+1:max_per_bisec_row];
+% % %       plot(x_right,y_right,'c*');
+% % %       
+% % %       
+% % %       % Left image
+% % %       max_angle=35;
+% % %       min_angle=10;
+% % %       for angle=(max_angle):-1:(min_angle)
+% % %           x_left=[];
+% % %           for y_left=row_lt_eye+1:max_per_bisec_row
+% % %           req_left_30_col_length=ceil(abs((y_left-row_lt_eye)*tan((angle*pi)/180)));
+% % %           x_left_temp=per_bisec-req_left_30_col_length;
+% % %           check_loc_x=find(x_left_temp==x);
+% % %           check_loc_y=find(y_left==y);
+% % %           if(check_loc_x==check_loc_y)
+% % %               break;
+% % %           end
+% % %           x_left=[x_left x_left_temp];
+% % %           end   
+% % %           y_left=[row_lt_eye+1:max_per_bisec_row];
+% % % %          plot(x_left,y_left,'c*');
+% % %           Sum=0;
+% % %           for index=row_lt_eye+1:max_per_bisec_row
+% % %               Sum=Sum+face_img(x_left(index-row_lt_eye),y_left(index-row_lt_eye));
+% % %           end
+% % %           Fx(angle)=Sum;
+% % %       end
+% % %       %Fx=gradient(Fx);
+% % % %       figure();
+% % % %       imshow(face_img);
+% % % %       hold on;
+% % %       x_left=[];
+% % %       max_angle=find(Fx==max(Fx));
+% % %       for y_left=row_lt_eye+1:max_per_bisec_row
+% % %           req_left_30_col_length=ceil(abs((y_left-row_lt_eye)*tan((max_angle*pi)/180)));
+% % %           x_left_temp=per_bisec+req_left_30_col_length;
+% % %           check_loc_x=find(x_left_temp==x);
+% % %           check_loc_y=find(y_left==y);
+% % %           if(check_loc_x==check_loc_y)
+% % %               break;
+% % %           end
+% % %           x_left=[x_left x_left_temp];
+% % %       end   
+% % %       y_left=[row_lt_eye+1:max_per_bisec_row];
+% % %       plot(x_left,y_left,'c*');
+
+        %% Ending
+      folder_idx
+      nameFolds{folder_idx}
+end

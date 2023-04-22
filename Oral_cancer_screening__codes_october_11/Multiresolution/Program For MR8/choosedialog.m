@@ -1,0 +1,33 @@
+function choice = choosedialog
+
+    d = dialog('Position',[300 300 250 150],'Name','Select One');
+    txt = uicontrol('Parent',d,...
+           'Style','text',...
+           'Position',[20 80 210 40],...
+           'String','Select operation');
+       
+    popup = uicontrol('Parent',d,...
+           'Style','popup',...
+           'Position',[75 70 100 25],...
+           'String',{'Normal Subjects';'Malignant Subjects';'Precancerous Subjects'},...
+           'Callback',@popup_callback);
+       
+    btn = uicontrol('Parent',d,...
+           'Position',[89 20 70 25],...
+           'String','Close',...
+           'Callback','delete(gcf)');
+       
+    choice = 'Concatinate Features of Frontal Face';
+       
+    % Wait for d to close before running to completion
+    uiwait(d);
+   
+       function popup_callback(popup,callbackdata)
+          idx = popup.Value;
+          popup_items = popup.String;
+          choice = char(popup_items(idx,:));
+       end
+   
+
+end
+
